@@ -256,12 +256,31 @@
 
   .date-modal-actions {
     display: flex;
-    justify-content: center;
-    gap: 1rem;
+    align-items: center;
+    gap: 0.75rem;
     margin-top: 1.25rem;
   }
 
-  .date-modal-actions button {
+  #date-modal-reset,
+  #date-modal-skip {
+    flex: 1;
+    border: 1px solid #ccc;
+    background: none;
+    color: #111111;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  #date-modal-reset:hover,
+  #date-modal-skip:hover {
+    background: #f0f0f0;
+  }
+
+  #date-modal-confirm {
+    flex: none;
     width: 3rem;
     height: 3rem;
     border: none;
@@ -272,20 +291,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-
-  #date-modal-reset,
-  #date-modal-skip {
-    background: #f0f0f0;
-    color: #111111;
-  }
-
-  #date-modal-reset:hover,
-  #date-modal-skip:hover {
-    background: #e5e5e5;
-  }
-
-  #date-modal-confirm {
     background: #30b44a;
     color: #ffffff;
   }
@@ -331,8 +336,8 @@
       <div class="mini-cal-grid" id="mini-cal-grid"></div>
 
       <div class="date-modal-actions">
-        <button id="date-modal-reset" aria-label="초기화">↺</button>
-        <button id="date-modal-skip" aria-label="건너뛰기">⏭</button>
+        <button id="date-modal-reset">초기화</button>
+        <button id="date-modal-skip">건너뛰기</button>
         <button id="date-modal-confirm" aria-label="확인">✓</button>
       </div>
     </div>
