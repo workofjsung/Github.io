@@ -54,14 +54,8 @@
     border-bottom-color: #111111;
   }
 
-  .add-row {
-    display: flex;
-    gap: 0.5rem;
-  }
-
   #todo-input {
-    flex: 1;
-    min-width: 0;
+    width: 100%;
     box-sizing: border-box;
     font-size: 1rem;
     padding: 0.75rem 1rem;
@@ -70,20 +64,7 @@
     outline: none;
   }
 
-  #todo-date-input {
-    flex: none;
-    width: 9.5rem;
-    box-sizing: border-box;
-    font-size: 0.9rem;
-    padding: 0.75rem 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    outline: none;
-    color: #111111;
-  }
-
-  #todo-input:focus,
-  #todo-date-input:focus {
+  #todo-input:focus {
     border-color: #111111;
   }
 
@@ -170,6 +151,87 @@
     background: #f0f0f0;
     color: #111111;
   }
+
+  .date-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1000;
+  }
+
+  .date-modal.hidden {
+    display: none;
+  }
+
+  .date-modal-content {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 360px;
+    padding: 1.5rem;
+    box-sizing: border-box;
+  }
+
+  #date-modal-text {
+    margin: 0 0 1rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    word-break: break-word;
+  }
+
+  #date-modal-input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+    color: #111111;
+    margin-bottom: 1rem;
+  }
+
+  #date-modal-input:focus {
+    border-color: #111111;
+  }
+
+  .date-modal-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .date-modal-actions button {
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  #date-modal-skip {
+    border: 1px solid #ccc;
+    background: none;
+    color: #111111;
+  }
+
+  #date-modal-skip:hover {
+    background: #f0f0f0;
+  }
+
+  #date-modal-confirm {
+    border: none;
+    background: #111111;
+    color: #ffffff;
+  }
+
+  #date-modal-confirm:hover {
+    background: #333333;
+  }
 </style>
 </head>
 <body>
@@ -181,20 +243,34 @@
 
     <h1>to-do list</h1>
 
-    <div class="add-row">
-      <input id="todo-input" type="text" placeholder="할 일을 입력하고 Enter" autocomplete="off">
-      <input id="todo-date-input" type="date">
-    </div>
+    <input id="todo-input" type="text" placeholder="할 일을 입력하고 Enter" autocomplete="off">
     <ul id="todo-list"></ul>
   </main>
+
+  <div class="date-modal hidden" id="date-modal">
+    <div class="date-modal-content">
+      <p id="date-modal-text"></p>
+      <input id="date-modal-input" type="date">
+      <div class="date-modal-actions">
+        <button id="date-modal-skip">건너뛰기</button>
+        <button id="date-modal-confirm">추가</button>
+      </div>
+    </div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script src="todos.js"></script>
   <script>
     const input = document.getElementById('todo-input');
-    const dateInput = document.getElementById('todo-date-input');
     const list = document.getElementById('todo-list');
+
+    const dateModal = document.getElementById('date-modal');
+    const dateModalText = document.getElementById('date-modal-text');
+    const dateModalInput = document.getElementById('date-modal-input');
+    const dateModalSkip = document.getElementById('date-modal-skip');
+    const dateModalConfirm = document.getElementById('date-modal-confirm');
+    let pendingText = '';
 
     function todayString() {
       const d = new Date();
@@ -251,20 +327,40 @@
       });
     }
 
-    function submitTodo() {
-      const text = input.value.trim();
-      if (!text) return;
-      addTodo(text, dateInput.value || null);
-      input.value = '';
-      dateInput.value = '';
+    function openDateModal() {
+      dateModalText.textContent = `"${pendingText}" 날짜를 선택하세요`;
+      dateModalInput.value = '';
+      dateModal.classList.remove('hidden');
+      dateModalInput.focus();
+    }
+
+    function closeDateModal() {
+      dateModal.classList.add('hidden');
+      pendingText = '';
+    }
+
+    function finalizeAdd(dateValue) {
+      addTodo(pendingText, dateValue || null);
+      closeDateModal();
+      input.focus();
     }
 
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') submitTodo();
+      if (e.key !== 'Enter') return;
+      const text = input.value.trim();
+      if (!text) return;
+      pendingText = text;
+      input.value = '';
+      openDateModal();
     });
 
-    dateInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') submitTodo();
+    dateModalSkip.addEventListener('click', () => finalizeAdd(null));
+    dateModalConfirm.addEventListener('click', () => finalizeAdd(dateModalInput.value));
+    dateModalInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') finalizeAdd(dateModalInput.value);
+    });
+    dateModal.addEventListener('click', (e) => {
+      if (e.target === dateModal) closeDateModal();
     });
 
     subscribeTodos(renderTodos);
