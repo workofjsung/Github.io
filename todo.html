@@ -183,54 +183,115 @@
     word-break: break-word;
   }
 
-  #date-modal-input {
-    width: 100%;
-    box-sizing: border-box;
-    font-size: 1rem;
-    padding: 0.75rem 1rem;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    outline: none;
-    color: #111111;
-    margin-bottom: 1rem;
-  }
-
-  #date-modal-input:focus {
-    border-color: #111111;
-  }
-
-  .date-modal-actions {
+  .mini-cal-header {
     display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
   }
 
-  .date-modal-actions button {
-    flex: 1;
-    font-size: 0.9rem;
-    font-weight: 700;
-    padding: 0.65rem 1rem;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-
-  #date-modal-skip {
-    border: 1px solid #ccc;
+  .mini-cal-header button {
+    border: none;
     background: none;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    border-radius: 6px;
     color: #111111;
   }
 
-  #date-modal-skip:hover {
+  .mini-cal-header button:hover {
     background: #f0f0f0;
   }
 
-  #date-modal-confirm {
-    border: none;
+  #mini-cal-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .mini-cal-weekdays,
+  .mini-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+
+  .mini-cal-weekdays {
+    margin-bottom: 0.25rem;
+  }
+
+  .mini-cal-weekdays div {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #999;
+  }
+
+  .mini-cal-grid div {
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+
+  .mini-cal-grid div:hover {
+    background: #f0f0f0;
+  }
+
+  .mini-cal-grid div.empty {
+    cursor: default;
+  }
+
+  .mini-cal-grid div.empty:hover {
+    background: none;
+  }
+
+  .mini-cal-grid div.selected {
     background: #111111;
     color: #ffffff;
   }
 
+  .date-modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.25rem;
+  }
+
+  .date-modal-actions button {
+    width: 3rem;
+    height: 3rem;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #date-modal-reset,
+  #date-modal-skip {
+    background: #f0f0f0;
+    color: #111111;
+  }
+
+  #date-modal-reset:hover,
+  #date-modal-skip:hover {
+    background: #e5e5e5;
+  }
+
+  #date-modal-confirm {
+    background: #30b44a;
+    color: #ffffff;
+  }
+
   #date-modal-confirm:hover {
-    background: #333333;
+    background: #279e3f;
   }
 </style>
 </head>
@@ -250,10 +311,29 @@
   <div class="date-modal hidden" id="date-modal">
     <div class="date-modal-content">
       <p id="date-modal-text"></p>
-      <input id="date-modal-input" type="date">
+
+      <div class="mini-cal-header">
+        <button id="mini-cal-prev" aria-label="이전 달">‹</button>
+        <span id="mini-cal-label"></span>
+        <button id="mini-cal-next" aria-label="다음 달">›</button>
+      </div>
+
+      <div class="mini-cal-weekdays">
+        <div>SUN</div>
+        <div>MON</div>
+        <div>TUE</div>
+        <div>WED</div>
+        <div>THU</div>
+        <div>FRI</div>
+        <div>SAT</div>
+      </div>
+
+      <div class="mini-cal-grid" id="mini-cal-grid"></div>
+
       <div class="date-modal-actions">
-        <button id="date-modal-skip">건너뛰기</button>
-        <button id="date-modal-confirm">추가</button>
+        <button id="date-modal-reset" aria-label="초기화">↺</button>
+        <button id="date-modal-skip" aria-label="건너뛰기">⏭</button>
+        <button id="date-modal-confirm" aria-label="확인">✓</button>
       </div>
     </div>
   </div>
@@ -267,16 +347,33 @@
 
     const dateModal = document.getElementById('date-modal');
     const dateModalText = document.getElementById('date-modal-text');
-    const dateModalInput = document.getElementById('date-modal-input');
+    const dateModalReset = document.getElementById('date-modal-reset');
     const dateModalSkip = document.getElementById('date-modal-skip');
     const dateModalConfirm = document.getElementById('date-modal-confirm');
+    const miniCalLabel = document.getElementById('mini-cal-label');
+    const miniCalGrid = document.getElementById('mini-cal-grid');
+    const miniCalPrev = document.getElementById('mini-cal-prev');
+    const miniCalNext = document.getElementById('mini-cal-next');
+
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
+
     let pendingText = '';
+    let pickerYear;
+    let pickerMonth;
+    let selectedDate = null;
 
     function todayString() {
       const d = new Date();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
       return `${d.getFullYear()}-${mm}-${dd}`;
+    }
+
+    function toDateString(year, month, day) {
+      const mm = String(month + 1).padStart(2, '0');
+      const dd = String(day).padStart(2, '0');
+      return `${year}-${mm}-${dd}`;
     }
 
     function renderTodos(todos) {
@@ -327,11 +424,58 @@
       });
     }
 
+    function renderMiniCal() {
+      miniCalLabel.textContent = `${monthNames[pickerMonth]} ${pickerYear}`;
+      miniCalGrid.innerHTML = '';
+
+      const firstWeekday = new Date(pickerYear, pickerMonth, 1).getDay();
+      const daysInMonth = new Date(pickerYear, pickerMonth + 1, 0).getDate();
+
+      for (let i = 0; i < firstWeekday; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'empty';
+        miniCalGrid.appendChild(cell);
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const cell = document.createElement('div');
+        cell.textContent = day;
+        const dateString = toDateString(pickerYear, pickerMonth, day);
+        if (dateString === selectedDate) cell.classList.add('selected');
+        cell.addEventListener('click', () => {
+          selectedDate = dateString;
+          renderMiniCal();
+        });
+        miniCalGrid.appendChild(cell);
+      }
+    }
+
+    miniCalPrev.addEventListener('click', () => {
+      pickerMonth -= 1;
+      if (pickerMonth < 0) {
+        pickerMonth = 11;
+        pickerYear -= 1;
+      }
+      renderMiniCal();
+    });
+
+    miniCalNext.addEventListener('click', () => {
+      pickerMonth += 1;
+      if (pickerMonth > 11) {
+        pickerMonth = 0;
+        pickerYear += 1;
+      }
+      renderMiniCal();
+    });
+
     function openDateModal() {
-      dateModalText.textContent = `"${pendingText}" 날짜를 선택하세요`;
-      dateModalInput.value = '';
+      dateModalText.textContent = `"${pendingText}"`;
+      const now = new Date();
+      pickerYear = now.getFullYear();
+      pickerMonth = now.getMonth();
+      selectedDate = null;
+      renderMiniCal();
       dateModal.classList.remove('hidden');
-      dateModalInput.focus();
     }
 
     function closeDateModal() {
@@ -354,11 +498,12 @@
       openDateModal();
     });
 
-    dateModalSkip.addEventListener('click', () => finalizeAdd(null));
-    dateModalConfirm.addEventListener('click', () => finalizeAdd(dateModalInput.value));
-    dateModalInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') finalizeAdd(dateModalInput.value);
+    dateModalReset.addEventListener('click', () => {
+      selectedDate = null;
+      renderMiniCal();
     });
+    dateModalSkip.addEventListener('click', () => finalizeAdd(null));
+    dateModalConfirm.addEventListener('click', () => finalizeAdd(selectedDate));
     dateModal.addEventListener('click', (e) => {
       if (e.target === dateModal) closeDateModal();
     });
