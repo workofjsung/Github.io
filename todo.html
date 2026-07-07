@@ -54,8 +54,14 @@
     border-bottom-color: #111111;
   }
 
+  .add-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
   #todo-input {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     box-sizing: border-box;
     font-size: 1rem;
     padding: 0.75rem 1rem;
@@ -64,7 +70,20 @@
     outline: none;
   }
 
-  #todo-input:focus {
+  #todo-date-input {
+    flex: none;
+    width: 9.5rem;
+    box-sizing: border-box;
+    font-size: 0.9rem;
+    padding: 0.75rem 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+    color: #111111;
+  }
+
+  #todo-input:focus,
+  #todo-date-input:focus {
     border-color: #111111;
   }
 
@@ -162,7 +181,10 @@
 
     <h1>to-do list</h1>
 
-    <input id="todo-input" type="text" placeholder="할 일을 입력하고 Enter" autocomplete="off">
+    <div class="add-row">
+      <input id="todo-input" type="text" placeholder="할 일을 입력하고 Enter" autocomplete="off">
+      <input id="todo-date-input" type="date">
+    </div>
     <ul id="todo-list"></ul>
   </main>
 
@@ -171,6 +193,7 @@
   <script src="todos.js"></script>
   <script>
     const input = document.getElementById('todo-input');
+    const dateInput = document.getElementById('todo-date-input');
     const list = document.getElementById('todo-list');
 
     function todayString() {
@@ -228,12 +251,20 @@
       });
     }
 
-    input.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
+    function submitTodo() {
       const text = input.value.trim();
       if (!text) return;
-      addTodo(text, null);
+      addTodo(text, dateInput.value || null);
       input.value = '';
+      dateInput.value = '';
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitTodo();
+    });
+
+    dateInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitTodo();
     });
 
     subscribeTodos(renderTodos);
