@@ -82,20 +82,21 @@
   }
 
   .gallery-grid {
-    column-count: 2;
-    column-gap: 0.75rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
   }
 
-  @media (min-width: 560px) {
-    .gallery-grid {
-      column-count: 3;
-    }
+  .gallery-column {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
   }
 
   .gallery-item {
     position: relative;
-    break-inside: avoid;
-    margin-bottom: 0.75rem;
     border-radius: 10px;
     overflow: hidden;
     background: #f5f5f5;
@@ -159,30 +160,56 @@
     const galleryGrid = document.getElementById('gallery-grid');
     const galleryEmpty = document.getElementById('gallery-empty');
 
+    let currentImages = [];
+
+    function columnCount() {
+      return window.matchMedia('(min-width: 560px)').matches ? 3 : 2;
+    }
+
+    function buildItem(image) {
+      const item = document.createElement('div');
+      item.className = 'gallery-item';
+
+      const img = document.createElement('img');
+      img.src = image.dataUrl;
+      img.alt = '';
+      img.loading = 'lazy';
+
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = '×';
+      removeBtn.setAttribute('aria-label', '삭제');
+      removeBtn.addEventListener('click', () => removeImage(image.id));
+
+      item.appendChild(img);
+      item.appendChild(removeBtn);
+      return item;
+    }
+
     function renderGallery(images) {
+      currentImages = images;
       const sorted = images.slice().sort((a, b) => b.createdAt - a.createdAt);
       galleryEmpty.style.display = sorted.length ? 'none' : 'block';
       galleryGrid.innerHTML = '';
 
-      sorted.forEach((image) => {
-        const item = document.createElement('div');
-        item.className = 'gallery-item';
+      const numColumns = columnCount();
+      const columns = [];
+      for (let i = 0; i < numColumns; i++) {
+        const column = document.createElement('div');
+        column.className = 'gallery-column';
+        columns.push(column);
+        galleryGrid.appendChild(column);
+      }
 
-        const img = document.createElement('img');
-        img.src = image.dataUrl;
-        img.alt = '';
-        img.loading = 'lazy';
-
-        const removeBtn = document.createElement('button');
-        removeBtn.textContent = '×';
-        removeBtn.setAttribute('aria-label', '삭제');
-        removeBtn.addEventListener('click', () => removeImage(image.id));
-
-        item.appendChild(img);
-        item.appendChild(removeBtn);
-        galleryGrid.appendChild(item);
+      sorted.forEach((image, i) => {
+        columns[i % numColumns].appendChild(buildItem(image));
       });
     }
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => renderGallery(currentImages), 150);
+    });
 
     galleryInput.addEventListener('change', async () => {
       const files = Array.from(galleryInput.files || []);
